@@ -1,18 +1,23 @@
 --[[
-# Script Name:  ClueHermod
+# Script Name:  CluesEditedHermod
 # Description:  <Hermod Farming>
 # Instructions: start at war retreat with last preset loaded
-# Autor:        <Clue (discord)>
-# Version:      <1.0>
-# Datum:        <2024.03.30>
+# Autor:        Clue (Edited by jezza)
+# Version:      <1.1>
+# Datum:        <10/4/2024" (MM/DD/YYYY)
+# CONFIGURE LINE 20 TO UR KEYBIND!!@!@!@@@!@!@!@!@!@!!@!@!@!@!@!@!@!@!@!@!!@!@!@!@!@!@!@!@!@!@!@!@!@!@!@!@!
+# IF YOU WANT TO CHANGE EXTREMES TO OVERLOADS, (55324, 55326, 55328, 55330) CHANGE THESE TO OVERLOAD #LINE 313
 --]]
 
 -- imports
+local UTILS = require("utils")
 local API = require("api")
-local MAX_IDLE_TIME_MINUTES = 5
+local MAX_IDLE_TIME_MINUTES = 6
 local startTime, afk = os.time(), os.time()
 local fail = 0
 local CurrentState = 0
+local PID = 127143
+local maxDistance = 2
 
 API.SetDrawLogs(true)
 
@@ -37,7 +42,8 @@ local IDS = {
 }
 
 local BuffBar = {
-    soulsplit = 26033,
+    necromancy = 30831,
+	PrayerRenewal = 14695,
 }
 
 local Names = {
@@ -47,19 +53,14 @@ local Names = {
 local ABs = {
     Surge = API.GetABs_name1("Surge"),
     WarRetreat = API.GetABs_name1("War's Retreat Teleport"),
-    SoulSplit = API.GetABs_name1("Soul Split"),
+    necromancy = API.GetABs_name1("Protect from Necromancy"),
     EatFood = API.GetABs_name1("Eat Food"),
 }
 
 local LootTable = {
     989, --crystal key 
-    54018, -- elemental anima stone 
-    12176, -- spirit weed seed      
-    48768, -- carambola seed
-    44811, -- necrite stone spirit 
-    44813, -- banite stone spirit
-    42954, -- onyx dust 
-    55191, -- hermodic plate  
+	55191, -- hermodic plate 
+    42954, -- onyx dust  
     55216, -- animated drumsticks  
     55673, -- hermod pet 
     52946, -- small bladed Orichalcite
@@ -68,8 +69,13 @@ local LootTable = {
     1632, -- dragonstone
     53504, --tiny blade necronium
     47283, -- rune blade
-    55630 --memento
-}
+    55630, --memento
+	54018, -- elemental anima stone 
+    12176, -- spirit weed seed      
+    48768, -- carambola seed
+    44811, -- necrite stone spirit 
+    44813, -- banite stone spirit
+	}
 
 -- helper functions
 
@@ -94,7 +100,7 @@ end
 
 local function idleCheck()
     local timeDiff = os.difftime(os.time(), afk)
-    local randomTime = math.random((MAX_IDLE_TIME_MINUTES * 60) * 0.6, (MAX_IDLE_TIME_MINUTES * 60) * 0.9)
+    local randomTime = math.random((MAX_IDLE_TIME_MINUTES * 60) * 1.0, (MAX_IDLE_TIME_MINUTES * 60) * 1.5)
 
     if timeDiff > randomTime then
         API.PIdle2()
@@ -113,22 +119,24 @@ local function gameStateChecks()
     end
 end
 
-local function TeleportWarRetreat() 
-    if ABs.WarRetreat.id ~= 0 and ABs.WarRetreat.enabled then
-        API.DoAction_Ability_Direct(ABs.WarRetreat, 1, API.OFF_ACT_GeneralInterface_route)
-        API.RandomSleep2(2000,1000,2000)
-        API.WaitUntilMovingandAnimEnds()
+local function TeleportWarRetreat()  
+    if API.InvItemcount_String(Names.Shark) < 5 or API.GetPrayPrecent() < 60 then
+        if ABs.WarRetreat.id ~= 0 and ABs.WarRetreat.enabled then
+            API.DoAction_Ability_Direct(ABs.WarRetreat, 1, API.OFF_ACT_GeneralInterface_route)
+            API.RandomSleep2(2000,1000,2000)
+            API.WaitUntilMovingandAnimEnds()
+		end	
     end
 end
 
-local function IsSoulSplit() 
-    local soul = API.Buffbar_GetIDstatus(BuffBar.soulsplit, false)
+local function Isnecromancy() 
+    local soul = API.Buffbar_GetIDstatus(BuffBar.necromancy, false)
     return soul.found
 end
 
-local function praySoulSplit() 
-    if not IsSoulSplit() then 
-        API.DoAction_Ability_Direct(ABs.SoulSplit, 1, API.OFF_ACT_GeneralInterface_route)
+local function praynecromancy() 
+    if not Isnecromancy() then 
+        API.DoAction_Ability_Direct(ABs.necromancy, 1, API.OFF_ACT_GeneralInterface_route)
         API.RandomSleep2(600,0,0)
     end
 end
@@ -146,29 +154,36 @@ local function isportalInterfaceOpen()
     return API.VB_FindPSett(2874, 1, 0).state == 18
 end
 
-local function openLootWindow() 
-    if not API.LootWindowOpen_2() then 
+local function openLootWindow()
+    if not API.LootWindowOpen_2() then
         print("loot window not open")
         result = API.GetAllObjArray1(LootTable ,50,{3})
         for _, obj in ipairs(result) do 
             if obj ~= nil then
                 print("found anima")
-                API.KeyboardPress("\\", 100, 200)
+                API.KeyboardPress('A', 60, 100)
                 API.RandomSleep2(1000,500,1000)
-                return
+			if obj ~= nil then
+			    API.RandomSleep2(700,200,700)
+			    API.DoAction_Loot_w(LootTable, 30, API.PlayerCoordfloat(), 30)
+				    API.WaitUntilMovingEnds()
+					    API.RandomSleep2( 800, 300, 1000 )
+						
+				
+				end
             end
         end
     end
 end
 
-local function deactivateSoulSplit() 
-    if IsSoulSplit() then 
-        API.DoAction_Ability_Direct(ABs.SoulSplit, 1, API.OFF_ACT_GeneralInterface_route)
+local function deactivatenecromancy() 
+    if Isnecromancy() then 
+        API.DoAction_Ability_Direct(ABs.necromancy, 1, API.OFF_ACT_GeneralInterface_route)
     end
 end
 
 local function needBank() 
-    return API.InvItemcount_String(Names.Shark) < 5 or API.GetPrayPrecent() < 90
+    return API.InvItemcount_String(Names.Shark) < 5 or API.GetPrayPrecent() < 60
 end
 
 local function healthCheck()
@@ -179,11 +194,12 @@ local function healthCheck()
             API.DoAction_Ability_Direct(ABs.EatFood, 1, API.OFF_ACT_GeneralInterface_route)
             API.RandomSleep2(600, 600, 600)
         end
-        elseif hp < 20 or API.InvItemcount_String(Names.Shark) < 1 then
+        elseif hp < 20 or API.InvItemcount_String(Names.Shark) < 3 then
             print("Teleporting out")
+			deactivatenecromancy()
             API.DoAction_Ability("War's Retreat Teleport", 1, API.OFF_ACT_GeneralInterface_route)
             CurrentState = States.Bank
-            API.RandomSleep2(3000, 3000, 3000)
+            API.RandomSleep2(3000, 1000, 3000)
     end
 end
 
@@ -195,18 +211,27 @@ end
 
 local function loot() 
     openLootWindow()
+	
 
     if API.LootWindowOpen_2() and (API.LootWindow_GetData()[1].itemid1 > 0) then
         print("First Loot All Attempt")
         API.DoAction_LootAll_Button()
         API.RandomSleep2(1000, 250, 250)
-        deactivateSoulSplit()
         API.RandomSleep2(600,100,300)
-        API.DoAction_Ability("War's Retreat Teleport", 1, API.OFF_ACT_GeneralInterface_route)
-        API.RandomSleep2(3000, 1000, 2000)
-        CurrentState = States.Bank
+			if not API.InvItemFound1(385,SHARK) then
+				CurrentState = States.Bank
+				    deactivatenecromancy()
+				    API.DoAction_Ability("War's Retreat Teleport", 1, API.OFF_ACT_GeneralInterface_route)
+                    API.RandomSleep2(3000, 1000, 2000)
+			elseif API.InvItemcount_String(Names.Shark) < 4 then
+				CurrentState = States.Bank
+				    deactivatenecromancy()
+                    API.DoAction_Ability("War's Retreat Teleport", 1, API.OFF_ACT_GeneralInterface_route)
+                    API.RandomSleep2(3000, 1000, 2000)				
+            end
     end
-end
+end	
+		
 
 local function isFightingMinion() 
     local id = API.Local_PlayerInterActingWith_Id()
@@ -228,9 +253,9 @@ local function WarRetreatMagic()
         if API.GetPrayPrecent() < 90 then 
             -- Altar
             API.DoAction_Object1(0x3d,API.OFF_ACT_GeneralObject_route0,{IDS.Altar} ,50)
-            API.RandomSleep2(600,0,0)
+            API.RandomSleep2(600,200,600)
             API.WaitUntilMovingandAnimEnds()
-            API.RandomSleep2(1200,0,0)
+            API.RandomSleep2(500,200,600)
         end
 
         loadLastPreset()
@@ -246,39 +271,119 @@ local function WarRetreatMagic()
     end
 end
 
+-- Function to check if a game object is within a certain distance
+    function isObjectWithinDistance()
+    local POS = API.PlayerCoord()
+    local playerCoord = API.PlayerCoord()
+    local foundObject = API.FindObjCheck_1(24731, 3, 1, FALSE, 0, Enter)
+        if foundObject ~= nil then
+            local objectCoord = foundObject.tile
+            local distance = math.sqrt((playerCoord.x - objectCoord.x)^2 + (playerCoord.y - objectCoord.y)^2)
+            return distance <= 2
+        end
+    end		
+
 local function BossLobby()
+UTILS.randomSleep(1500)
     if isportalInterfaceOpen() and not API.ReadPlayerMovin2() then
-        API.DoAction_Interface(0x24, API.OFF_ACT_GeneralInterface_route, 1, 1591, 60, -1, 3808)
-        API.RandomSleep2(600, 600, 400)
+        API.DoAction_Interface(0x24,0xffffffff,1,1591,60,-1,API.OFF_ACT_GeneralInterface_route)
+        API.RandomSleep2(400, 600, 1400)
         CurrentState = States.BossFight
+	else  
+	if isportalInterfaceOpen() then
+	    API.DoAction_Interface(0x24,0xffffffff,1,1591,60,-1,API.OFF_ACT_GeneralInterface_route)
+        API.RandomSleep2(400, 600, 1400)
+        CurrentState = States.BossFight
+	
     else
         API.DoAction_Object1(0x39, API.OFF_ACT_GeneralObject_route0, {IDS.BossBarrier}, 50)
-        API.RandomSleep2(600, 600, 400)
+        API.RandomSleep2(1000, 600, 400)
         API.WaitUntilMovingEnds()
+				if isObjectWithinDistance then	
+						      if isportalInterfaceOpen() and not API.ReadPlayerMovin2() then
+                                  API.DoAction_Interface(0x24,0xffffffff,1,1591,60,-1,API.OFF_ACT_GeneralInterface_route)
+								  CurrentState = States.BossFight
+                                  API.RandomSleep2(2200, 600, 1400)
+								  UTILS.countTicks(1)
+								  local POS = API.PlayerCoord()
+                        API.DoAction_Tile(WPOINT.new(POS.x + math.random(1, 3), POS.y + math.random(11, 15), POS.z))   -- move to randomized spot
+                        UTILS.countTicks(1)
+                        UTILS.randomSleep(1500)	
+				else BossLobby()			
+                end
+	end			
     end
-
-end
+        end
+end		
 
 local function BossFight()
-    praySoulSplit()
     local minion = API.GetAllObjArray1({IDS.Minions}, 50, {1})[1]
-    if minion ~= nil and not isFightingMinion() then 
+	local POS = API.PlayerCoord()
+	local obj = {30163}
+    local hasPrayerRenewal = false
+    local PrayerRenewal = { 33186, 33184, 33182, 33180, 33178, 33176 }
+    local extremen = { 55324, 55326, 55328, 55330 }
+    local invContains2 = { 33186, 33184, 33182, 33180, 33178, 33176 }
+    local cooldown = (API.Buffbar_GetIDstatus(BuffBar.PrayerRenewal, false).id > 0)
+    local range = 15
+    local types = {1}  API.RandomSleep2(800, 300, 500)
+    local objects = API.GetAllObjArrayInteract(obj, range, types)
+	    if objects then
+        for _, object in ipairs(objects) do
+        if object.Id == 30163 then
+          if object.Anim == 21650 then
+            API.DoAction_Tile(WPOINT.new(POS.x + math.random(2, 3), POS.y + math.random(2, 3), POS.z))
+			    API.RandomSleep2(1800, 600, 800)
+			API.DoAction_Tile(WPOINT.new(POS.x + math.random(-2, -1), POS.y + math.random(-2, -1), POS.z))
+			API.RandomSleep2(1100, 700, 1200)
+			API.DoAction_NPC(0x2a,API.OFF_ACT_AttackNPC_route, {IDS.Hermod}, 50)
+			API.RandomSleep2(1500, 500, 600)
+		end
+		
+        if minion ~= nil and not isFightingMinion() then 
         API.DoAction_NPC(0x2a,API.OFF_ACT_AttackNPC_route, {IDS.Minions}, 50)
-        return
-    end
+        end
+		
+		print (cooldown)
+		print ("1")
+		
+            if cooldown == false then
+            for _, itemId in ipairs(PrayerRenewal) do
+            if API.InvItemcount_1(itemId) > 0 then
+                hasPrayerRenewal = true		   
+		
+		
+        elseif hasPrayerRenewal == true then
+	        print (Drinking)
+            API.RandomSleep2(300, 200, 400)
+            API.DoAction_Inventory2(PrayerRenewal, 0, 1, API.OFF_ACT_GeneralInterface_route)
+            API.RandomSleep2(1300, 500, 400)
+	        API.DoAction_Inventory2(extremen, 0, 1, API.OFF_ACT_GeneralInterface_route)
+		 return
+		    end
+		end 	
+		
+		
 
     if minion == nil then 
         local id = API.Local_PlayerInterActingWith_Id()
-        if id ~= IDS.Hermod then 
+        if id ~= IDS.Hermod then
+            praynecromancy()		
             API.DoAction_NPC(0x2a,API.OFF_ACT_AttackNPC_route, {IDS.Hermod}, 50)
             return
-        end
+		end	
+		end
+	end
+		 end 
     end
-end
+  end
+end  
 
-while API.Read_LoopyLoop() do 
+
+while API.Read_LoopyLoop() do
+    praynecromancy() 
     API.DoRandomEvents()
-    idleCheck()
+	idleCheck()
     gameStateChecks()
     if CurrentState == States.Bank and not API.ReadPlayerMovin() then 
         if not AtLocation(Locations.WarRetreat) then 
@@ -297,13 +402,13 @@ while API.Read_LoopyLoop() do
         BossLobby()
     end
 
-    if CurrentState == States.BossFight then 
+    if CurrentState == States.BossFight then	
         if IsHermodAlive() then 
             healthCheck()
             BossFight()
         else
-            loot()
+            loot()			
         end
     end
-    API.RandomSleep2(600,0,100)
+    API.RandomSleep2(600,400,100)
 end
